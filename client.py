@@ -19,10 +19,11 @@ class Client(object):
         self.method_pattern = re.compile('^(get|count|update|create|increase)_(.+?)(_list)?$')
         # model 对象与表名关联, 因此 model 对象必须有一个  '__tablename__' 属性
         if isinstance(models, types.ModuleType):
-            ALL_MODELS = [getattr(models, name) for name in dir(models) if
-                          isinstance(getattr(models, name), DeclarativeMeta) and
-                          hasattr(getattr(models, name), '__tablename__')]
-            self.TABLE_MODEL_MAP = {model.__tablename__: model for model in ALL_MODELS}
+            self.TABLE_MODEL_MAP = get_models(models)
+        elif isinstance(models, list):
+            self.TABLE_MODEL_MAP = {}
+            for module in models:
+                self.TABLE_MODEL_MAP.update(get_models(module))
         # Session
         self.SessionFactory = SessionFactory
         # spec alias
@@ -119,3 +120,10 @@ class Client(object):
             update(increment, synchronize_session=synchronize_session)
         session.flush()
         return data
+
+
+def get_models(module):
+    all_models = [getattr(module, name) for name in dir(module) if
+                  isinstance(getattr(module, name), DeclarativeMeta) and
+                  hasattr(getattr(module, name), '__tablename__')]
+    return {model.__tablename__: model for model in all_models}
